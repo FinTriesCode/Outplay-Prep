@@ -8,28 +8,30 @@ public class GameBoard : MonoBehaviour
     public int _width = 6;
     public int _height = 8;
 
-    //define some spacingfor the board 
+    //define some spacing between the nodes
     public float _spacingX;
     public float _spacingY;
 
     //token, node(s) refs
-    public GameObject[] _tokenPrefabs;
-    private Node[,] _gameBoard;
-    public GameObject _tokenBoardGameObj;
+    public GameObject[] _tokenPrefabs; //list prefabs of the tokens
+    private Node[,] _gameBoard; //2d array of game board positions (nodes)
+    public GameObject _tokenBoardGameObj; //object of the bored itself.
 
 
     public ArrayLayout _arrLayout; //sourced file (https://drive.google.com/file/d/16sUIA2QjwPntjzXlu-rxu8qQlQ9FO6Uo/view) that allows 2d arrays to be seen in-inspector
-    public static GameBoard _instance; //singleton
+    public static GameBoard _instance; //singleton ref
 
     //on awake, make the board a singleton
     private void Awake()
     {
+        //set singleton
         _instance = this;
     }
 
     //init board on start
     private void Start()
     {
+        //initialise board
         InitBoard();
     }
 
@@ -48,10 +50,10 @@ public class GameBoard : MonoBehaviour
         {
             for (int x = 0; x < _width; x++)
             {
-                //set pos of each node
+                //set pos of each node (used index of both loops (subtract node spacing))
                 Vector2 _position = new Vector2(x - _spacingX, y - _spacingY);
 
-                //get random value from array (get random token prefab to place)
+                //get random prefab from array (get random token prefab to place)
                 int _randIndx = Random.Range(0, _tokenPrefabs.Length);
 
                 //use sourced _arrLayout (in inspector) to check whether a node should be usable or not
@@ -60,35 +62,37 @@ public class GameBoard : MonoBehaviour
                 else
                 {
                     GameObject _token = Instantiate(_tokenPrefabs[_randIndx], _position, Quaternion.identity); //create game object of token in-engine
-                    _token.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+                    _token.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f); //set size/scale of token(s)
                     _token.GetComponent<Token>().SetIndances(x, y); //set indaces (pos) of token
                     _gameBoard[x, y] = new Node(true, _token); //pos onto board and create a new node (_isMoveable and _tokenGameObj)
                 }
 
             }
         }
+
+        //check the board for pairings
         BoardCheck();
     }
 
     public bool BoardCheck()
     {
         Debug.Log("Checking Board");
-        bool _hasMatched = false;
+        bool _hasMatched = false; //pairing bool
 
-        List<Token> _tokensToRemove = new List<Token>();
+        List<Token> _tokensToRemove = new List<Token>(); //list of tokens to be removed
 
         //loop through board
         for (int x = 0; x < _width; x++)
         {
             for (int y = 0; y < _height; y++)
             {
-                //is node (on board) usable?
+                //is the node (on board) usable?
                 if (_gameBoard[x, y]._isUsable)
                 {
                     //get token game object from board
                     Token _token = _gameBoard[x, y]._tokenObj.GetComponent<Token>();
 
-                    //if token is NOT usable
+                    //if token is NOT already matched
                     if (!_token._isMatched)
                     {
                         //check to see if token is connected to other tokens
@@ -184,6 +188,7 @@ public class GameBoard : MonoBehaviour
             };
         }
 
+        //clear list of connected tokens between <-> and  ^  checks, and then reinstate the starting token
         _connectedTokens.Clear();
         _connectedTokens.Add(_pToken);
 
@@ -232,13 +237,15 @@ public class GameBoard : MonoBehaviour
 
   
 
-
+//class to store a list of the connected tokens and the direction of the pairing
+//class used instead of struct so that it is stored in the heap
 public class MatchResult
 {
     public List<Token> _connectedTokens;
     public MatchDirection _direction;
 }
 
+//enum to store the directions of pairings
 public enum MatchDirection
 {
     Vertical, 

@@ -7,11 +7,11 @@ public class Token : MonoBehaviour
     //enum of token colour (type)
     public TokenType _tokenType;
 
-    //index
+    //index (pos on grid)
     public int _indX;
     public int _indY;
 
-    //positions
+    //positions (used for switching)
     private Vector2 _currentPos;
     private Vector2 _desiredPos;
 
@@ -26,6 +26,7 @@ public class Token : MonoBehaviour
         _indY = _pIndY;
     }
 
+    //used to set the grid pos of the token
     public void SetIndances(int _pindX, int _pIndY)
     {
         _indX = _pindX;
