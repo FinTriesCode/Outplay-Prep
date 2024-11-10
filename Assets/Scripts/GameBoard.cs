@@ -21,6 +21,15 @@ public class GameBoard : MonoBehaviour
     public ArrayLayout _arrLayout; //sourced file (https://drive.google.com/file/d/16sUIA2QjwPntjzXlu-rxu8qQlQ9FO6Uo/view) that allows 2d arrays to be seen in-inspector
     public static GameBoard _instance; //singleton ref
 
+    public List<GameObject> _tokensToDestroy = new();
+
+    [SerializeField]
+    private Token _selectedToken;
+
+    [SerializeField]
+    private bool _isMoving = false;
+
+
     //on awake, make the board a singleton
     private void Awake()
     {
@@ -35,9 +44,32 @@ public class GameBoard : MonoBehaviour
         InitBoard();
     }
 
+    private void Update()
+    {
+        //when we click
+        if(Input.GetMouseButtonDown(0))
+        {
+            //check what we have clicked on via a raycast
+            Ray _ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit2D _hit = Physics2D.Raycast(_ray.origin, _ray.direction);
+
+            //if the item is valid
+            if(_hit.collider != null && _hit.collider.gameObject.GetComponent<Token>())
+            {
+                if (_isMoving) return;
+
+                Token _token = _hit.collider.gameObject.GetComponent<Token>();
+
+                SelectToken(_token);
+            }
+        }
+    }
+
     //init board method
     void InitBoard()
     {
+        DestroyTokens();
+
         //set size of node using pre defined data
         _gameBoard = new Node[_width, _height];
 
@@ -65,13 +97,26 @@ public class GameBoard : MonoBehaviour
                     _token.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f); //set size/scale of token(s)
                     _token.GetComponent<Token>().SetIndances(x, y); //set indaces (pos) of token
                     _gameBoard[x, y] = new Node(true, _token); //pos onto board and create a new node (_isMoveable and _tokenGameObj)
+
+                    _tokensToDestroy.Add(_token);
                 }
 
             }
         }
+//        InitBoard();
+    }
 
-        //check the board for pairings
-        BoardCheck();
+    private void DestroyTokens()
+    {
+        if(_tokensToDestroy != null)
+        {
+            foreach(GameObject _token in _tokensToDestroy)
+            {
+                Destroy(_token);
+            }
+
+            _tokensToDestroy.Clear();
+        }
     }
 
     public bool BoardCheck()
@@ -227,15 +272,100 @@ public class GameBoard : MonoBehaviour
             };
         }
     }
+
+    #region Swap Tokens
+
+    public void SelectToken(Token _pToken)
+    {
+        //select token if one is not yet selected
+        if(_selectedToken == null)
+        {
+            Debug.Log(_pToken);
+            _selectedToken = _pToken;
+        }
+        //if same token is selected twice, unselect it
+        else if(_selectedToken == _pToken)
+        {
+            _selectedToken = null;
+        }
+        //if selected token is not null and is not the current token -> try and swap the two tokens. Select again to unselect.
+        else if(_selectedToken != _pToken)
+        {
+            TokenSwap(_selectedToken, _pToken);
+            _selectedToken = null;
+        }
+    }   
+    
+    //swap the pos of two tokens
+    private void TokenSwap(Token _pSCurrentToken, Token _targetToken)
+    {
+        //check adjacency
+        if (!IsAdjacent(_pSCurrentToken, _targetToken))
+        {
+            return;
+        }
+
+        SwapTokenPositions(_pSCurrentToken, _targetToken);
+        _isMoving = true;
+
+        StartCoroutine(ProcessTokenMatches(_pSCurrentToken, _targetToken));
+    }
+
+    private bool IsAdjacent(Token _pSCurrentToken, Token _targetToken)
+    {
+        //retuen as 1 (true) if the reletive position(s) == 1
+        return Mathf.Abs(_pSCurrentToken._indX - _targetToken._indX) + Mathf.Abs(_pSCurrentToken._indY - _targetToken._indY) == 1;
+    }
+
+    private void SwapTokenPositions(Token _pSCurrentToken, Token _targetToken)
+    {
+        //temp save place for one of the tokens
+        GameObject _tempToken = _gameBoard[_pSCurrentToken._indX, _pSCurrentToken._indY]._tokenObj;
+
+        //swap the tokens by overriding the current with the target, and then the old target with temp (current)
+        _gameBoard[_pSCurrentToken._indX, _pSCurrentToken._indY]._tokenObj = _gameBoard[_targetToken._indX, _targetToken._indY]._tokenObj;
+        _gameBoard[_targetToken._indX, _targetToken._indY]._tokenObj = _tempToken;
+
+        //update indices
+        int _tempIndX = _pSCurrentToken._indX;
+        int _tempIndY = _pSCurrentToken._indY;
+
+        _pSCurrentToken._indX = Mathf.Clamp(_targetToken._indX, 0, _width - 1);
+        _pSCurrentToken._indY = Mathf.Clamp(_targetToken._indY, 0, _height - 1);
+        _targetToken._indX = Mathf.Clamp(_tempIndX, 0, _width - 1);
+        _targetToken._indY = Mathf.Clamp(_tempIndY, 0, _height - 1);
+
+        //apply movement
+        _pSCurrentToken.MoveToTargetPos(_gameBoard[Mathf.Clamp(_targetToken._indX, 0, _width - 1), Mathf.Clamp(_targetToken._indY, 0, _height - 1)]._tokenObj.transform.position);
+        _targetToken.MoveToTargetPos(_gameBoard[Mathf.Clamp(_pSCurrentToken._indX, 0, _width - 1), Mathf.Clamp(_pSCurrentToken._indY, 0, _height - 1)]._tokenObj.transform.position);
+    }
+
+
+
+    private IEnumerator ProcessTokenMatches(Token _pCurrentPos, Token _pTargetPos)
+    {
+        yield return new WaitForSeconds(0.25f);
+
+        bool matched = BoardCheck();
+
+        if(!matched)
+        {
+            SwapTokenPositions(_pCurrentPos, _pTargetPos);
+        }
+        _isMoving = false;
+    }
+
+
+    #endregion
 }
 
 
 
-            
 
 
 
-  
+
+
 
 //class to store a list of the connected tokens and the direction of the pairing
 //class used instead of struct so that it is stored in the heap
