@@ -146,9 +146,11 @@ public class GameBoard : MonoBehaviour
                         //if 3 or more are connected
                         if(_matchedTokens._connectedTokens.Count >= 3)
                         {
-                            _tokensToRemove.AddRange(_matchedTokens._connectedTokens);
+                            MatchResult _greaterMatchedTokens = AdvancedMatch(_matchedTokens);
 
-                            foreach(Token _t in _matchedTokens._connectedTokens)
+                            _tokensToRemove.AddRange(_greaterMatchedTokens._connectedTokens);
+
+                            foreach(Token _t in _greaterMatchedTokens._connectedTokens)
                             {
                                 _t._isMatched = true;
                             }
@@ -160,6 +162,79 @@ public class GameBoard : MonoBehaviour
             }
         }
         return _hasMatched;
+    }
+
+    private MatchResult AdvancedMatch(MatchResult _pMatchedTokens)
+    {
+        //check for horizontal or longer horizontal match
+        if (_pMatchedTokens._direction == MatchDirection.Horizontal || _pMatchedTokens._direction == MatchDirection.LongHorizontal)
+        {
+            //for every token in the connected tokens
+            foreach (Token _token in _pMatchedTokens._connectedTokens)
+            {
+                //make a list of the extra (advanced) matched tokens
+                List<Token> _extraConnectedTokens = new List<Token>();
+
+                //if horizontal match is  found, check for extra or 'advanced' connections
+                CheckTokenDirection(_token, new Vector2Int(0, 1), _extraConnectedTokens); //check up
+                CheckTokenDirection(_token, new Vector2Int(0, -1), _extraConnectedTokens); //check down
+
+                //if 2 or more extra connections are found - register connected tokens
+                if (_extraConnectedTokens.Count >= 2)
+                {
+                    Debug.Log("Horizontal Advanced Match Found.");
+                    _extraConnectedTokens.AddRange(_pMatchedTokens._connectedTokens);
+
+                    //return out advanced match
+                    return new MatchResult
+                    {
+                        _connectedTokens = _extraConnectedTokens,
+                        _direction = MatchDirection.Super
+                    };
+                }
+            }
+            return new MatchResult
+            {
+                _connectedTokens = _pMatchedTokens._connectedTokens,
+                _direction = _pMatchedTokens._direction
+            };
+        }
+
+        //check for vertical or longer vertical match
+        else if (_pMatchedTokens._direction == MatchDirection.Vertical || _pMatchedTokens._direction == MatchDirection.LongVertical)
+        {
+            //for every token in the connected tokens
+            foreach (Token _token in _pMatchedTokens._connectedTokens)
+            {
+                //make a list of the extra (advanced) matched tokens
+                List<Token> _extraConnectedTokens = new List<Token>();
+
+                //if vertical match is  found, check for extra or 'advanced' connections
+                CheckTokenDirection(_token, new Vector2Int(1, 0), _extraConnectedTokens);
+                CheckTokenDirection(_token, new Vector2Int(-1, 0), _extraConnectedTokens);
+
+                //if 2 or more extra connections are found - register connected tokens
+                if (_extraConnectedTokens.Count >= 2)
+                {
+                    Debug.Log("Vertical Advanced Match Found.");
+                    _extraConnectedTokens.AddRange(_pMatchedTokens._connectedTokens);
+
+                    //return new match
+                    return new MatchResult
+                    {
+                        _connectedTokens = _extraConnectedTokens,
+                        _direction = MatchDirection.Super
+                    };
+                }
+            }
+            return new MatchResult
+            {
+                _connectedTokens = _pMatchedTokens._connectedTokens,
+                _direction = _pMatchedTokens._direction
+            };
+        }
+        return null;
+
     }
 
     void CheckTokenDirection(Token _pToken, Vector2Int _pDirection, List<Token> _connectedTokens)
