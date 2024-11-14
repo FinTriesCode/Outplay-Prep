@@ -15,6 +15,7 @@ public class GameBoard : MonoBehaviour
     //token, node(s) refs
     public GameObject[] _tokenPrefabs; //list prefabs of the tokens
     private Node[,] _gameBoard; //2d array of game board positions (nodes)
+    public GameObject _tokenParentObj;
     public GameObject _tokenBoardGameObj; //object of the bored itself.
 
 
@@ -94,6 +95,8 @@ public class GameBoard : MonoBehaviour
                 else
                 {
                     GameObject _token = Instantiate(_tokenPrefabs[_randIndx], _position, Quaternion.identity); //create game object of token in-engine
+                    _token.transform.localScale= new Vector3(0.35f, 0.35f, 0.35f);
+                    _token.transform.SetParent(_tokenParentObj.transform);
                     _token.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f); //set size/scale of token(s)
                     _token.GetComponent<Token>().SetIndances(x, y); //set indaces (pos) of token
                     _gameBoard[x, y] = new Node(true, _token); //pos onto board and create a new node (_isMoveable and _tokenGameObj)
@@ -103,7 +106,9 @@ public class GameBoard : MonoBehaviour
 
             }
         }
-//        InitBoard();
+        //if(BoardCheck(false))
+            //InitBoard();
+        
     }
 
     private void DestroyTokens()
@@ -119,12 +124,22 @@ public class GameBoard : MonoBehaviour
         }
     }
 
-    public bool BoardCheck()
+    public bool BoardCheck(bool _pActionTake)
     {
         Debug.Log("Checking Board");
         bool _hasMatched = false; //pairing bool
 
-        List<Token> _tokensToRemove = new List<Token>(); //list of tokens to be removed
+        List<Token> _tokensToRemove = new(); //list of tokens to be removed
+
+        //check all nodes
+        foreach(Node _tokenNode in _gameBoard)
+        {
+            //if the node/pos is not null/empty
+            if(_tokenNode._tokenObj != null)
+            {
+                _tokenNode._tokenObj.GetComponent<Token>()._isMatched = false;
+            }
+        }
 
         //loop through board
         for (int x = 0; x < _width; x++)
@@ -161,9 +176,146 @@ public class GameBoard : MonoBehaviour
                 }
             }
         }
+
+        if(_pActionTake)
+        {
+            //check all tokens that are queued to be removed
+            foreach(Token _tokenToRemove in _tokensToRemove)
+            {
+                _tokenToRemove._isMatched = false;
+            }
+
+            //remove appropriate tokens and refill 
+            RemoveAndRefill(_tokensToRemove);
+
+            //stop infinite checking until memory is lost
+            if(BoardCheck(false)) 
+            {
+                BoardCheck(true);
+            }
+        }
+
+
         return _hasMatched;
     }
 
+
+    #region Token Delete And Replace
+    private void RemoveAndRefill(List<Token> _pTokensToRemove)
+    {
+        foreach(Token _token in _pTokensToRemove)
+        {
+            //get x and y indices (pos) of token on board
+            int _indX = _token._indX;
+            int _indY = _token._indY;
+
+            //destroy token
+            Destroy(_token.gameObject);
+
+//          //create empty node on the playboard
+            _gameBoard[_indX, _indY] = new Node(true, null);
+        }
+
+        //loop through entire board until an empty node is located
+        //then refill it
+        for(int x = 0; x < _width; x++)
+        {
+            for(int y = 0; y < _height; y++)
+            {
+                if (_gameBoard[x, y]._tokenObj == null)
+                {
+                    Debug.Log("Position: " + x + " " + y + " is empty. Refill Atttemted.");
+                    TokenRefill(x, y);
+                }
+            }
+        }
+    }
+
+    private void TokenRefill(int x, int y)
+    {
+        int _offsetY = 1;
+
+        //while the token is still on the board and the node is empty/null
+        //loop till top of board reached
+        while(y + _offsetY < _height && _gameBoard[x, y + _offsetY]._tokenObj == null)
+        {
+            Debug.Log("Above token is null -> node is empty.");
+            _offsetY++; //incrememnt as not at top of board or not-null node
+        }
+
+        if (y + _offsetY < _height && _gameBoard[x, y + _offsetY]._tokenObj != null)
+        {
+            //token found
+            Token _aboveToken = _gameBoard[x, y + _offsetY]._tokenObj.GetComponent<Token>();
+
+            //calculate new pos of token
+            Vector3 targetPos = new Vector3(x - _spacingX, y - _spacingY, _aboveToken.transform.position.z);
+            Debug.Log("Potion from (" + x + (y + _offsetY) + ") has been moved to (" + x + y + ")");
+
+            //apply movement to new pos
+            _aboveToken.MoveToTargetPos(targetPos);
+
+            //update gameboard with changes to token pos's
+            _aboveToken.SetIndances(x, y);
+            _gameBoard[x, y] = _gameBoard[x, y + _offsetY];
+
+            //set old pos to null/empty
+            _gameBoard[x, y + _offsetY] = new Node(true, null);
+        }
+
+        //if we reach board top without finding token
+        if(y + _offsetY == _height)
+        {
+            Debug.Log("Board height reached. No token found.");
+            TokenSpawnAtHeight(x);
+        }
+
+    }
+
+    private void TokenSpawnAtHeight(int x)
+    {
+        int _index = FindLowestNull(x);
+        int _targetLocation = 8 - _index;
+
+        //rand token colour for spawning
+        int _randTokenColour = Random.Range(0, _tokenPrefabs.Length);
+
+        //create new token and set it to become a child of parent obj,
+        //parent is for organisation in-engine.
+        GameObject _newToken = Instantiate(_tokenPrefabs[_randTokenColour], new Vector2(x - _spacingX, _height - _spacingY), Quaternion.identity);
+        _newToken.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+        _newToken.transform.SetParent(_tokenParentObj.transform);
+
+        //set indaces/pos of newly spawned token
+        _newToken.GetComponent<Token>().SetIndances(x, _index);
+
+        //update gameboard to contain new token
+        _gameBoard[x, _index] = new Node(true, _newToken);
+
+        //move new otken to desired position
+        Vector3 _targetPos = new Vector3(_newToken.transform.position.x, _newToken.transform.position.y - _targetLocation, _newToken.transform.position.z);
+        _newToken.GetComponent<Token>().MoveToTargetPos(_targetPos);
+    }
+
+    private int FindLowestNull(int x)
+    {
+        int _lowestNull = 99; //set to 99 so that the lowest null default is not on-board. If this is reached, we have a problem.
+
+        for (int y = 7; y >= 0; y--) //decrement down board
+        {
+            if (_gameBoard[x, y]._tokenObj == null)
+            {
+                _lowestNull = y;
+            }
+        }
+        return _lowestNull;
+    }
+
+
+
+    #endregion
+
+    #region Matching
     private MatchResult AdvancedMatch(MatchResult _pMatchedTokens)
     {
         //check for horizontal or longer horizontal match
@@ -347,6 +499,7 @@ public class GameBoard : MonoBehaviour
             };
         }
     }
+    #endregion
 
     #region Swap Tokens
 
@@ -421,7 +574,7 @@ public class GameBoard : MonoBehaviour
     {
         yield return new WaitForSeconds(0.25f);
 
-        bool matched = BoardCheck();
+        bool matched = BoardCheck(true); //this may need to be set to true - cant remember :/
 
         if(!matched)
         {

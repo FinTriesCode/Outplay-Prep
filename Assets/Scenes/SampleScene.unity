@@ -122,6 +122,37 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &384382375
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 384382376}
+  m_Layer: 0
+  m_Name: On-board Tokens
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &384382376
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 384382375}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -252,6 +283,7 @@ MonoBehaviour:
   - {fileID: 1237440149978651432, guid: e327aea727e44af4a94e99cd0420f424, type: 3}
   - {fileID: 519048714048860875, guid: 68081fb142005fe40aeb621669310e4b, type: 3}
   - {fileID: 5948873963553377580, guid: cc250ed68b496a748a05a57ae0aea8d7, type: 3}
+  _tokenParentObj: {fileID: 384382375}
   _tokenBoardGameObj: {fileID: 1238167200}
   _arrLayout:
     rows:
@@ -263,6 +295,9 @@ MonoBehaviour:
     - row: 000000000000
     - row: 000000000000
     - row: 000000000000
+  _tokensToDestroy: []
+  _selectedToken: {fileID: 0}
+  _isMoving: 0
 --- !u!4 &1238167202
 Transform:
   m_ObjectHideFlags: 0
@@ -284,3 +319,4 @@ SceneRoots:
   m_Roots:
   - {fileID: 519420032}
   - {fileID: 1238167202}
+  - {fileID: 384382376}
